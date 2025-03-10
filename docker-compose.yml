@@ -1,0 +1,80 @@
+services:
+  postgres-db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: muqi1217
+      POSTGRES_DB: userdb
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d  # Mount init scripts
+
+  user-service:
+    build: ./user-service-codebase
+    ports:
+      - "5008:5008"
+    env_file:
+      - ./user-service-codebase/.env
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+
+  booking-service:
+    build: ./booking-service-codebase
+    ports:
+      - "5006:5006"
+    env_file:
+      - ./booking-service-codebase/.env
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+
+  event-service:
+    build: ./event-service-codebase
+    ports:
+      - "5002:5002"
+    env_file:
+      - ./event-service-codebase/.env
+    depends_on:
+      - mongodb
+
+  notification-service:
+    build: ./notification-service-codebase
+    ports:
+      - "5004:5004"
+    env_file:
+      - ./notification-service-codebase/.env
+    depends_on:
+      - mongodb
+
+  frontend:
+    build: ./frontend-service-codebase
+    ports:
+      - "5173:5173"  # Changed from 80:5173 to 5173:5173
+    depends_on:
+      - user-service
+
+  mongodb:
+    image: mongo:6.0
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: muqi1217
+    command: --auth
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro  # Mount MongoDB init script
+
+volumes:
+  postgres-data:
+  mongo-data:

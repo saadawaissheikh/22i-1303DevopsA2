@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-service
+  namespace: online-event-booking
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: booking-service
+  template:
+    metadata:
+      labels:
+        app: booking-service
+    spec:
+      containers:
+        - name: booking-service
+          image: 22i1351/booking-service:latest
+          ports:
+            - containerPort: 5006
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secrets
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking-service
+  namespace: online-event-booking
+spec:
+  type: ClusterIP
+  selector:
+    app: booking-service
+  ports:
+    - protocol: TCP
+      port: 5006
+      targetPort: 5006
